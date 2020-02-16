@@ -1,6 +1,12 @@
 import os
+import re
 import shutil
 
+
+# Change working directory if called from scripts/
+og_cwd = os.getcwd()
+if og_cwd.split('/')[-1] == 'scripts':
+    os.chdir('/'.join(og_cwd.split('/')[:-1]))
 
 # Get environment name
 environment = None
@@ -15,7 +21,6 @@ if os.path.isfile('.ploy'):
 
 if environment is None:
     environment = '.venv'
-    
     
 # Remove virtual environment
 if os.path.isdir('.venv'):

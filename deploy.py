@@ -5,6 +5,11 @@ import re
 import subprocess
 
 
+# Change working directory if called from scripts/
+og_cwd = os.getcwd()
+if og_cwd.split('/')[-1] == 'scripts':
+    os.chdir('/'.join(og_cwd.split('/')[:-1]))
+    
 # Get environment name
 environment = None
 
@@ -28,5 +33,5 @@ subprocess.check_call([environment + '/bin/python', '-m', 'pip', 'install', '--u
 subprocess.check_call([environment + '/bin/python', '-m', 'pip', 'install', '-r', 'requirements.txt'])
 
 # Run gitploy.py with 
-subprocess.check_call([environment + '/bin/python', 'gitploy.py'])
+subprocess.check_call([environment + '/bin/python', og_cwd + '/gitploy.py'])
 
