@@ -12,7 +12,6 @@ gitploy = '''# Bootstrap .git connection with dulwich
 
 import os
 from dulwich import porcelain
-import yaml
 
 url = 'https://github.com/ybnd/gitploy'
 cwd = os.getcwd()
