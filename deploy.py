@@ -32,6 +32,34 @@ subprocess.check_call(['python', '-m', 'venv', environment])
 subprocess.check_call([environment + '/bin/python', '-m', 'pip', 'install', '--upgrade', 'pip'])
 subprocess.check_call([environment + '/bin/python', '-m', 'pip', 'install', '-r', 'requirements.txt'])
 
-# Run gitploy.py with 
-subprocess.check_call([environment + '/bin/python', og_cwd + '/gitploy.py'])
+# Deposit temporary script to set up .git
+with open('gitploy.py', 'w') as f:
+    f.write(
+    '''import os
+from dulwich import porcelain
+import yaml
+
+
+cwd = os.getcwd()
+
+if os.path.isfile('.ploy'):
+    with open('.ploy', 'r') as f:
+        ploy = yaml.safe_load(f.read())
+
+if os.path.isdir('.git'):
+    print(f"Opening repository in {cwd}")
+    repo = porcelain.open_repo(cwd)
+else:
+    print(f"Cloning remote repository from {ploy['url']} to {cwd}")
+    repo = porcelain.clone(ploy['url'] ,cwd)
+
+fetched_data = porcelain.fetch(repo, ploy['url'])
+'''
+    )
+
+# Set up .git
+subprocess.check_call([environment + '/bin/python', 'gitploy.py'])
+
+# Remove the temporary script
+os.remove('gitploy.py')
 
