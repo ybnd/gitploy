@@ -28,22 +28,31 @@ fetched_data = porcelain.fetch(repo, url)
 
 
 # Create a virtual environment in .venv
+print(f"Creating a new virtual environment in {environment}...\n")
 subprocess.check_call(['python', '-m', 'venv', environment])
 
-# Install requirements.txt
-subprocess.check_call([environment + '/bin/python', '-m', 'pip', 'install', '--upgrade', 'pip'])
-subprocess.check_call([environment + '/bin/python', '-m', 'pip', 'install', *requirements])
+executable = None
+if os.path.isdir(os.path.join(environment, 'bin')):
+    executable = os.path.join(environment, 'bin/python')
+elif os.path.isdir(os.path.join(environment, 'Scripts')):
+    executable = os.path.join(environment, 'Scripts/python')
 
-# Deposit temporary script to set up .git
-with open('gitploy.py', 'w') as f:
-    f.write(gitploy)
 
-# Set up .git
-subprocess.check_call([environment + '/bin/python', 'gitploy.py'])
+if executable is not None:
+    # Install requirements.txt
+    subprocess.check_call([executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
+    subprocess.check_call([executable, '-m', 'pip', 'install', *requirements])
 
-# Remove the temporary script
-os.remove('gitploy.py')
+    # Deposit temporary script to set up .git
+    with open('gitploy.py', 'w') as f:
+        f.write(gitploy)
 
-# Remove this script
-os.remove(__file__)
+    # Set up .git
+    subprocess.check_call([executable, 'gitploy.py'])
+
+    # Remove the temporary script
+    os.remove('gitploy.py')
+
+    # Remove this script
+    os.remove(__file__)
 
