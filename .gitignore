@@ -1,2 +1,5 @@
 .idea/
 .venv
+.ploy
+scripts/
+__pycache__/
