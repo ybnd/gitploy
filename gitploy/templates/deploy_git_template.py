@@ -3,7 +3,7 @@
 import os
 from dulwich import porcelain
 
-url = '$url'
+url = "$url"
 cwd = os.getcwd()
 
 assert isinstance(url, str)
@@ -14,5 +14,3 @@ if os.path.isdir('.git'):
 else:
     print(f"Cloning remote repository from {url} to {cwd}")
     repo = porcelain.clone(url, cwd)
-
-fetched_data = porcelain.fetch(repo, url)
