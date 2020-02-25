@@ -15,9 +15,10 @@ yaml.add_representer(
 
 DEFAULT = {
     'url': '',
+    'branch': 'master',
     'name': '',
     'environment': '.venv',
-    'install_requirements': ['dulwich'],
+    'install_requirements': ['GitPython'],
     'requirements_file': 'requirements.txt',
     'setup': None,
     'destinations': {
@@ -42,11 +43,14 @@ if __name__ == '__main__':
     )
 
     update = Template(update).substitute(
-        url=config['url'],
+        branch=config['branch'],
+        name=config['name'],
     )
 
     deploy_git = Template(deploy_git).substitute(
         url=config['url'],
+        branch=config['branch'],
+        name=config['name'],
     )
 
     if config['setup'] is not None:
@@ -61,6 +65,7 @@ if __name__ == '__main__':
 
     deploy = Template(deploy).substitute(
         environment=config['environment'],
+        name=config['name'],
         install_requirements=str(config['install_requirements']),
         requirements_file=config['requirements_file'],
         deploy_git=deploy_git,

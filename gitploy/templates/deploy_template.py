@@ -3,18 +3,15 @@ import os
 import shutil
 import subprocess
 
+
+# Remove this script (directory must be empty!)
+os.remove(__file__)
+
 environment = "$environment"
+name = "$name"
+
 deploy_git = '''$deploy_git'''
 setup = '''$setup'''
-
-# Remove the previous environment or .git folder
-if os.path.isdir(environment):
-    print(f"Removing previous virtual environment {environment}")
-    shutil.rmtree(environment)
-
-if os.path.isdir('.git'):
-    print(f"Removing previous .git folder")
-    shutil.rmtree('.git')
 
 # Create a virtual environment in .venv
 subprocess.check_call(['python', '-m', 'venv', environment])
@@ -34,25 +31,18 @@ subprocess.check_call([executable, '-m', 'pip', 'install', *$install_requirement
 subprocess.check_call([executable, '-c', deploy_git])
 
 # Install requirements
-subprocess.check_call([executable, '-m', 'pip', 'install', '-r', '$requirements_file'])
+subprocess.check_call([executable, '-m', 'pip', 'install', '-r', '$name/$requirements_file'])
 
 if setup:
     subprocess.check_call([executable, '-c', setup])
 
 # Write scripts to file
-update = "$update_dir"
+update = os.path.join(name, "$update_dir")
 if not os.path.isdir(os.path.dirname(update)):
     os.mkdir(os.path.dirname(update))
 
 with open(update, 'w+') as f:
     f.write('''$update''')
 
-version = "$version_dir"
-if not os.path.isdir(os.path.dirname(version)):
-    os.mkdir(os.path.dirname(version))
-
-with open(version, 'w+') as f:
-    f.write('''$version''')
-
-# Remove this script
-os.remove(__file__)
+# Move virtual environment into the repository directory
+shutil.move(environment, name)
