@@ -24,6 +24,7 @@ DEFAULT = {
     'destinations': {
         'update': 'scripts/update.py',
     },
+    'wrap': None,
 }
 
 
@@ -43,6 +44,7 @@ if __name__ == '__main__':
     )
 
     update = Template(update).substitute(
+        environment=config['environment'],
         branch=config['branch'],
         name=config['name'],
     )
@@ -64,14 +66,18 @@ if __name__ == '__main__':
         setup = ''
 
     deploy = Template(deploy).substitute(
+        url=config['url'],
         environment=config['environment'],
         name=config['name'],
+        branch=config['branch'],
         install_requirements=str(config['install_requirements']),
         requirements_file=config['requirements_file'],
         deploy_git=deploy_git,
         setup=setup,
         update_dir=config['destinations']['update'],
         update=update,
+        wrap=config['wrap'],  # todo: make sure that wrap is Dict[str,str]
+        wrapped_template=wrapped,
     )
 
     fname = f"deploy_{config['name']}.py"

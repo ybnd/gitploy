@@ -1,48 +1,69 @@
 # Bootstrap a virtual environment (see https://github.com/ybnd/bootstrap-venv)
 import os
-import shutil
+from distutils.util import strtobool
 import subprocess
+from string import Template
 
 
-# Remove this script (directory must be empty!)
-os.remove(__file__)
-
+url = "$url"
 environment = "$environment"
+branch = "$branch"
 name = "$name"
 
 deploy_git = '''$deploy_git'''
 setup = '''$setup'''
 
-# Create a virtual environment in .venv
-subprocess.check_call(['python', '-m', 'venv', environment])
+wrap = $wrap
+wrapped_template = '''$wrapped_template'''
 
-if os.path.isdir(os.path.join(environment, 'bin')):
-    executable = os.path.join(environment, 'bin/python')
-elif os.path.isdir(os.path.join(environment, 'Scripts')):
-    executable = os.path.join(environment, 'Scripts/python')
-else:
-    raise OSError('The virtual environment has an unexpected format.')
+do = strtobool(
+    input(f"Deploy {name} from {url} ({branch}) into {os.getcwd()}? (y/n) \n")
+)
 
-# Install requirements
-subprocess.check_call([executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
-subprocess.check_call([executable, '-m', 'pip', 'install', *$install_requirements])
+if do:
+    print(f"Creating a virtual environment in {environment}")
+    subprocess.check_call(['python', '-m', 'venv', environment])
 
-# Set up .git
-subprocess.check_call([executable, '-c', deploy_git])
+    if os.path.isdir(os.path.join(environment, 'bin')):
+        executable = os.path.join(environment, 'bin/python')
+    elif os.path.isdir(os.path.join(environment, 'Scripts')):
+        executable = os.path.join(environment, 'Scripts/python')
+    else:
+        raise OSError('The virtual environment has an unexpected format.')
 
-# Install requirements
-subprocess.check_call([executable, '-m', 'pip', 'install', '-r', '$name/$requirements_file'])
+    # Install gitploy requirements
+    subprocess.check_call([executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
+    subprocess.check_call([executable, '-m', 'pip', 'install', *$install_requirements])
 
-if setup:
-    subprocess.check_call([executable, '-c', setup])
+    # Set up .git
+    subprocess.check_call([executable, '-c', deploy_git])
 
-# Write scripts to file
-update = os.path.join(name, "$update_dir")
-if not os.path.isdir(os.path.dirname(update)):
-    os.mkdir(os.path.dirname(update))
+    # Install project requirements
+    subprocess.check_call([executable, '-m', 'pip', 'install', '-r', '$requirements_file'])
 
-with open(update, 'w+') as f:
-    f.write('''$update''')
+    if setup:
+        subprocess.check_call([executable, '-c', setup])
 
-# Move virtual environment into the repository directory
-shutil.move(environment, name)
+    # Write scripts to file
+    update = "$update_dir"
+    if not os.path.isdir(os.path.dirname(update)):
+        os.mkdir(os.path.dirname(update))
+
+    with open(update, 'w+') as f:
+        f.write('''$update''')
+
+    # Wrap scripts
+    if wrap is not None:
+        for file, wrapped in wrap.items():
+            with open(wrapped, 'w+') as f:
+                f.write(
+                    Template(wrapped_template).substitute(
+                        file=file, environment=environment,
+                    )
+                )
+
+
+    # Remove this script
+    os.remove(__file__)
+
+    input('\nDone.')
