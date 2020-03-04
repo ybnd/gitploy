@@ -17,7 +17,7 @@ DEFAULT = {
     'url': '',
     'branch': 'master',
     'name': '',
-    'environment': '.venv',
+    'environment': '',
     'install_requirements': ['GitPython'],
     'requirements_file': 'requirements.txt',
     'setup': None,

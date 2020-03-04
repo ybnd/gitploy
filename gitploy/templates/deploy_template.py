@@ -1,5 +1,6 @@
 # Bootstrap a virtual environment (see https://github.com/ybnd/bootstrap-venv)
-import os
+import
+import sys
 from distutils.util import strtobool
 import subprocess
 from string import Template
@@ -24,12 +25,15 @@ if do:
     print(f"Creating a virtual environment in {environment}")
     subprocess.check_call(['python', '-m', 'venv', environment])
 
-    if os.path.isdir(os.path.join(environment, 'bin')):
-        executable = os.path.join(environment, 'bin/python')
-    elif os.path.isdir(os.path.join(environment, 'Scripts')):
-        executable = os.path.join(environment, 'Scripts/python')
+    if environment:
+        if os.path.isdir(os.path.join(environment, 'bin')):
+            executable = os.path.join(environment, 'bin/python')
+        elif os.path.isdir(os.path.join(environment, 'Scripts')):
+            executable = os.path.join(environment, 'Scripts/python')
+        else:
+            raise OSError('The virtual environment has an unexpected format.')
     else:
-        raise OSError('The virtual environment has an unexpected format.')
+        executable = sys.executable
 
     # Install gitploy requirements
     subprocess.check_call([executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
