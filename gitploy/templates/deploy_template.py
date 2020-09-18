@@ -12,7 +12,18 @@ branch = "$branch"
 name = "$name"
 
 deploy_git = '''$deploy_git'''
-setup_scripts = $setup
+setup_scripts = [
+    '''$setup0''',
+    '''$setup1''',
+    '''$setup2''',
+    '''$setup3''',
+    '''$setup4''',
+    '''$setup5''',
+    '''$setup6''',
+    '''$setup7''',
+    '''$setup8''',
+    '''$setup9''',
+]
 
 wrap = $wrap
 wrapped_template = '''$wrapped_template'''
@@ -47,7 +58,8 @@ if do:
 
     # Run setup scripts
     for script in setup_scripts:
-        subprocess.check_call([executable, '-c', script])
+        if script:
+            subprocess.check_call([executable, '-c', script])
 
     # Write scripts to file
     update = "$update_dir"

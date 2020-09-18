@@ -58,16 +58,17 @@ if __name__ == '__main__':
     setup = []
 
     if config['setup'] is not None:
-        with open(config['setup'], 'r') as f:
-            setup = f.read()
-            
-        for script in setup:
-            setup.append(
-                Template(setup).substitute(
-                    environment=config['environment'],
+        if len(config['setup']) > 10:
+            raise ValueError("Can't support more than 10 setup scripts")   
+        for script in config['setup']:
+            with open(script, 'r') as f:
+                setup.append(
+                    Template(f.read()).substitute(
+                        environment=config['environment'],
+                    )
                 )
-            )
-        
+                
+    setup += [''] * (10 - len(setup))
 
     deploy = Template(deploy).substitute(
         url=config['url'],
@@ -77,7 +78,7 @@ if __name__ == '__main__':
         install_requirements=str(config['install_requirements']),
         requirements_file=config['requirements_file'],
         deploy_git=deploy_git,
-        setup=setup,
+        **{f"setup{i}":script for i, script in enumerate(setup)},
         update_dir=config['destinations']['update'],
         update=update,
         wrap=config['wrap'],  # todo: make sure that wrap is Dict[str,str]
