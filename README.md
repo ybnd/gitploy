@@ -31,9 +31,9 @@ pip install -e .
     version: <the version to deploy>
     url: <the url of your repo>
     
-    environment: <the name of the virtual environment, defaults to '.venv'>				
+    environment: <the name of the virtual environment, defaults to '.venv'>
     check: <path to check script templates>
-    setup: 
+    setup:
         - <paths to setup script templates>
         - ...
     ```
