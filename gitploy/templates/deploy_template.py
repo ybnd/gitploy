@@ -1,5 +1,5 @@
 # Bootstrap a virtual environment (see https://github.com/ybnd/bootstrap-venv)
-import
+import os
 import sys
 from distutils.util import strtobool
 import subprocess
@@ -12,7 +12,7 @@ branch = "$branch"
 name = "$name"
 
 deploy_git = '''$deploy_git'''
-setup = '''$setup'''
+setup_scripts = $setup
 
 wrap = $wrap
 wrapped_template = '''$wrapped_template'''
@@ -45,8 +45,9 @@ if do:
     # Install project requirements
     subprocess.check_call([executable, '-m', 'pip', 'install', '-r', '$requirements_file'])
 
-    if setup:
-        subprocess.check_call([executable, '-c', setup])
+    # Run setup scripts
+    for script in setup_scripts:
+        subprocess.check_call([executable, '-c', script])
 
     # Write scripts to file
     update = "$update_dir"
@@ -65,7 +66,6 @@ if do:
                         file=file, environment=environment,
                     )
                 )
-
 
     # Remove this script
     os.remove(__file__)

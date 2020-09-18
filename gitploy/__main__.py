@@ -20,7 +20,7 @@ DEFAULT = {
     'environment': '',
     'install_requirements': ['GitPython'],
     'requirements_file': 'requirements.txt',
-    'setup': None,
+    'setup': [],
     'destinations': {
         'update': 'scripts/update.py',
     },
@@ -55,15 +55,19 @@ if __name__ == '__main__':
         name=config['name'],
     )
 
+    setup = []
+
     if config['setup'] is not None:
         with open(config['setup'], 'r') as f:
             setup = f.read()
-
-        setup = Template(setup).substitute(
-            environment=config['environment'],
-        )
-    else:
-        setup = ''
+            
+        for script in setup:
+            setup.append(
+                Template(setup).substitute(
+                    environment=config['environment'],
+                )
+            )
+        
 
     deploy = Template(deploy).substitute(
         url=config['url'],
