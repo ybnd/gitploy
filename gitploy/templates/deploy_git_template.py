@@ -6,9 +6,11 @@ import shutil
 from git import Repo
 
 url = "$url"
-branch = "$branch"
+name = "$name"
+version = "$version"
 
 cwd = os.getcwd()
+temp = f'{name}-{version}-temp'
 
 assert isinstance(url, str)
 
@@ -16,14 +18,15 @@ if os.path.isdir('.git'):
     print(f"Opening repository in {cwd}")
     repo = Repo(cwd)
 else:
-    print(f"Cloning remote repository from {url} to {cwd}")
-    repo = Repo.clone_from(url, os.path.join(cwd, "$name"))
+    print(f"Cloning remote repository from {url} to {cwd}/{temp}/")
+    repo = Repo.clone_from(url, os.path.join(cwd, temp))
 
-repo.git.checkout(branch)
+repo.git.checkout(version)
 
-# Move clone into parent directory (cwd)
-for i in glob.glob('$name/*') + glob.glob('$name/.*'):
-    shutil.move(i, cwd)
+if not os.path.isdir('.git'):
+    # Move clone into parent directory (cwd)
+    for i in glob.glob(f'{temp}/*') + glob.glob(f'{temp}/.*'):
+        shutil.move(i, cwd)
 
 # Remove the (empty) clone directory
-shutil.rmtree('$name')
+shutil.rmtree(temp)

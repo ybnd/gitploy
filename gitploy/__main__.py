@@ -1,8 +1,11 @@
 import yaml
 import yaml.representer
+from subprocess import check_call
 from string import Template
 
 from gitploy.templates import *
+
+__version__ = 0.4
 
 # https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
 yaml.add_representer(
@@ -12,19 +15,15 @@ yaml.add_representer(
     )
 )
 
-
 DEFAULT = {
-    'url': '',
-    'branch': 'master',
-    'name': '',
-    'environment': '',
+    'url': None,
+    'version': None,
+    'name': None,
+    'environment': None,
     'install_requirements': ['GitPython'],
     'requirements_file': 'requirements.txt',
-    'setup': [],
-    'destinations': {
-        'update': 'scripts/update.py',
-    },
-    'wrap': None,
+    'check': None,
+    'setup': [],                                    # List of setup scripts (relative paths). Will not be packaged in the deploy script, so these should be in the repository
 }
 
 
@@ -39,53 +38,53 @@ if __name__ == '__main__':
         if key not in config:
             config[key] = DEFAULT[key]
 
+    for key in ['url', 'version', 'name', 'environment']:
+        if config[key] is None:
+            raise ValueError(f'No {key} provided!')
+
+    if config['check'] is not None:
+        with open(config['check']) as f:
+            check = Template(f.read()).substitute(  # limited config
+                url=config['url'],
+                name=config['name'],
+                version=config['version']
+            )
+
+            # Run the check when generating deploy script
+            check_call(['python', '-c', check])
+    else:
+        check = None
+
+
     config['install_requirements'] = list(
         set(DEFAULT['install_requirements'] + config['install_requirements'])
     )
 
-    update = Template(update).substitute(
-        environment=config['environment'],
-        branch=config['branch'],
-        name=config['name'],
-    )
-
-    deploy_git = Template(deploy_git).substitute(
+    deploy_git = Template(deploy_git).substitute(  # limited config
         url=config['url'],
-        branch=config['branch'],
         name=config['name'],
+        version=config['version']
     )
 
     setup = []
 
-    if config['setup'] is not None:
-        if len(config['setup']) > 10:
-            raise ValueError("Can't support more than 10 setup scripts")   
-        for script in config['setup']:
-            with open(script, 'r') as f:
-                setup.append(
-                    Template(f.read()).substitute(
-                        environment=config['environment'],
-                    )
-                )
-                
-    setup += [''] * (10 - len(setup))
+    for script in config['setup']:
+        setup.append(script)
 
     deploy = Template(deploy).substitute(
         url=config['url'],
         environment=config['environment'],
         name=config['name'],
-        branch=config['branch'],
+        version=config['version'],
+        check=check,
         install_requirements=str(config['install_requirements']),
         requirements_file=config['requirements_file'],
         deploy_git=deploy_git,
-        **{f"setup{i}":script for i, script in enumerate(setup)},
-        update_dir=config['destinations']['update'],
-        update=update,
-        wrap=config['wrap'],  # todo: make sure that wrap is Dict[str,str]
-        wrapped_template=wrapped,
+        setup=setup,
+        gitploy=__version__,
     )
 
-    fname = f"deploy_{config['name']}.py"
+    fname = f"deploy_{config['name']}-{config['version']}.py"
     if os.path.isfile(fname):
         os.remove(fname)
 
