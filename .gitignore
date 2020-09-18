@@ -1,2 +1,11 @@
 .idea/
 .venv
+.ploy
+scripts/
+__pycache__/
+.venv/
+*.pyc
+gitploy.egg-info/
+gitploy/__pycache__/
+build/
+dist/
