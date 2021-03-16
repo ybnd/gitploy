@@ -123,12 +123,23 @@ do = input(f"Deploy {name} from {url} ({version}) into {os.getcwd()}? (y/N) ")
 
 if os.path.exists(environment):
     overwrite = input(
-        f"Overwrite virtual environment in {environment}? (Y/n) "
+        f"Overwrite virtual environment {os.getcwd()}/{environment}? (Y/n) "
     )
     if overwrite == '' or strtobool(overwrite):
         shutil.rmtree(environment)
     else:
         cancel()
+
+
+if os.path.exists(".git"):
+    overwrite = input(
+        f"Overwrite git repository in {os.getcwd()}/.git? (Y/n) "
+    )
+    if overwrite == '' or strtobool(overwrite):
+        shutil.rmtree(".git")
+    else:
+        cancel()
+
 
 if do == '' or strtobool(do):
     try:
