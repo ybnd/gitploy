@@ -5,7 +5,7 @@ from string import Template
 
 from gitploy.templates import *
 
-__version__ = 0.4
+__version__ = 0.5
 
 # https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
 yaml.add_representer(
@@ -16,13 +16,13 @@ yaml.add_representer(
 )
 
 DEFAULT = {
-    'url': None,
-    'version': None,
-    'name': None,
-    'environment': None,
+    'url': '',
+    'version': '',
+    'name': '',
+    'environment': '',
     'install_requirements': ['GitPython'],
     'requirements_file': 'requirements.txt',
-    'check': None,
+    'check': '',
     'setup': [],                                    # List of setup scripts (relative paths). Will not be packaged in the deploy script, so these should be in the repository
 }
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         if config[key] is None:
             raise ValueError(f'No {key} provided!')
 
-    if config['check'] is not None:
+    if config['check']:
         with open(config['check']) as f:
             check = Template(f.read()).substitute(  # limited config
                 url=config['url'],
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             # Run the check when generating deploy script
             check_call(['python', '-c', check])
     else:
-        check = None
+        check = config['check']
 
 
     config['install_requirements'] = list(

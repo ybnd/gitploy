@@ -17,12 +17,26 @@ version = "$version"
 setup_script_templates = $setup
 # You can read them here: $url/tree/$version/scripts
 
+# Progress is logged to
+LOG = ".deploy.log"
+# If the deployment succeeds, this file will be renamed to
+SUCCESS = ".success.log"
+# If the deployment fails, it will be renamed to
+FAILURE = "failure.log"
+
 # The result is a fully functional development environment without the hassle.
 
 
 import os
 import sys
+import glob
+import time
+import shutil
+import logging
+import threading
 from distutils.util import strtobool
+from contextlib import contextmanager
+from itertools import cycle
 import subprocess
 from string import Template
 
@@ -32,48 +46,132 @@ requirements_file = "$requirements_file"
 check = '''$check'''
 deploy_git = '''$deploy_git'''
 
-do = strtobool(
-    input(f"Deploy {name} from {url} ({version}) into {os.getcwd()}? (y/n) \n")
-)
+# Remove previous log files:
+for log in glob.glob("*.log"):
+    os.remove(log)
 
-if do:
-    if check:
-        # Run check script
-        subprocess.check_call(['python', '-c', check])
+@contextmanager
+def waiton(message):
+    stdout = sys.stdout
+    stop = threading.Event()
+    ok = True
 
-    if environment:
-        print(f"Creating a virtual environment in {environment}")
-        subprocess.check_call(['python', '-m', 'venv', environment])
+    def _animation():
+        for frame in cycle("-\\|/"):
+            if stop.is_set():
+                break
+            stdout.write(frame + " " + message + "\r")
+            stdout.flush()
+            time.sleep(0.15)
+
+    try:
+        log.debug(message)
+        threading.Thread(target=_animation).start()
+        yield
+    except Exception as e:
+        ok = False
+        raise e
+    finally:
+        stop.set()
+        if ok:
+            stdout.writelines([
+                "+ Done " + message[0].lower() + message[1:] + "\n"
+            ])
+        else:
+            stdout.write("  " + message + "\n")
+
+
+
+def run(*args):
+    stdout = sys.stdout
+
+    with open(LOG, "a+") as f:
+        sys.stdout = f
+        try:
+            subprocess.check_call(args, stdout=f, stderr=f)
+        finally:
+            sys.stdout = stdout
+
+def cancel():
+    log.info("Canceled.")
+    exit(0)
+
+
+def log_script(script):
+    log.debug(f"\n{'=' * 80}\n{script}\n{'=' * 80}\n")
+
+
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
+sh = logging.StreamHandler()
+sh.setLevel(logging.INFO)
+sh.setFormatter(logging.Formatter("%(message)s"))
+log.addHandler(sh)
+fh = logging.FileHandler(LOG)
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(logging.Formatter("%(asctime)s: %(message)s"))
+log.addHandler(fh)
+
+
+do = input(f"Deploy {name} from {url} ({version}) into {os.getcwd()}? (y/N) ")
+
+if os.path.exists(environment):
+    overwrite = input(
+        f"Overwrite virtual environment in {environment}? (Y/n) "
+    )
+    if overwrite == '' or strtobool(overwrite):
+        shutil.rmtree(environment)
+    else:
+        cancel()
+
+if do == '' or strtobool(do):
+    try:
+        if check:
+            with waiton("Running check script"):
+                log_script(check)
+                run('python', '-c', check)
+
+        with waiton(f"Creating virtual environment in {environment}"):
+            run('python', '-m', 'venv', environment)
 
         if os.path.isdir(os.path.join(environment, 'bin')):
             executable = os.path.join(environment, 'bin/python')
         elif os.path.isdir(os.path.join(environment, 'Scripts')):
             executable = os.path.join(environment, 'Scripts/python')
         else:
-            raise OSError('The virtual environment has an unexpected format.')
-    else:
-        executable = sys.executable
-
-    # Install gitploy requirements
-    pip_install = [executable, '-m', 'pip', 'install']
-    subprocess.check_call(pip_install + ['--upgrade', 'pip'])
-    subprocess.check_call(pip_install + [*install_requirements])
-
-    # Set up .git repository
-    subprocess.check_call([executable, '-c', deploy_git])
-
-    # Install project requirements
-    subprocess.check_call(pip_install + ['-r', requirements_file])
-
-    # Run setup scripts
-    for script_template in setup_script_templates:
-        with open(script_template, 'r') as f:
-            script = Template(f.read()).substitute(
-                name=name, url=url, version=version, environment=environment
+            raise OSError(
+                'The virtual environment has an unexpected format.'
             )
-            subprocess.check_call([executable, '-c', script])
 
-    # Remove this script
-    os.remove(__file__)
+        with waiton("Installing gitploy requirements"):
+            pip_install = [executable, '-m', 'pip', 'install']
+            run(*pip_install, '--upgrade', 'pip')
+            run(*pip_install, *install_requirements)
 
-    input('\nDone.')
+        with waiton("Deploying git repository"):
+            log_script(deploy_git)
+            run(executable, '-c', deploy_git)
+
+        with waiton("Installing project requirements"):
+            run(*pip_install, '-r', requirements_file)
+
+        with waiton("Running setup scripts"):
+            for script_template in setup_script_templates:
+                with open(script_template, 'r') as f:
+                    script = Template(f.read()).substitute(
+                        name=name,
+                        url=url,
+                        version=version,
+                        environment=environment
+                    )
+                    log_script(script)
+                    run(executable, '-c', script)
+
+        # Remove this script
+        os.remove(__file__)
+        os.rename(LOG, SUCCESS)
+    except subprocess.CalledProcessError as e:
+        log.info(f"Failed to deploy!")
+        os.rename(LOG, FAILURE)
+else:
+    cancel()
