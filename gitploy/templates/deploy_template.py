@@ -92,9 +92,15 @@ def run(*args):
         finally:
             sys.stdout = stdout
 
+
+def hang(code = 0):
+    input()
+    exit(code)
+
+
 def cancel():
     log.info("Canceled.")
-    exit(0)
+    hang()
 
 
 def log_script(script):
@@ -170,8 +176,10 @@ if do == '' or strtobool(do):
         # Remove this script
         os.remove(__file__)
         os.rename(LOG, SUCCESS)
+        hang()
     except subprocess.CalledProcessError as e:
         log.info(f"Failed to deploy!")
         os.rename(LOG, FAILURE)
+        hang(1)
 else:
     cancel()
