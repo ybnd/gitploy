@@ -60,7 +60,7 @@ def waiton(message):
         for frame in cycle("-\\|/"):
             if stop.is_set():
                 break
-            stdout.write(frame + " " + message + "\r")
+            stdout.write("\r"+ frame + " " + message + " ")
             stdout.flush()
             time.sleep(0.15)
 
@@ -75,7 +75,7 @@ def waiton(message):
         stop.set()
         if ok:
             stdout.writelines([
-                "+ Done " + message[0].lower() + message[1:] + "\n"
+                "\r+ Done " + message[0].lower() + message[1:] + "\n"
             ])
         else:
             stdout.write("  " + message + "\n")
@@ -94,7 +94,7 @@ def run(*args):
 
 
 def hang(code = 0):
-    input()
+    input("<press any key to exit> ")
     exit(code)
 
 
@@ -121,6 +121,9 @@ log.addHandler(fh)
 
 do = input(f"Deploy {name} from {url} ({version}) into {os.getcwd()}? (y/N) ")
 
+if do == '' or not strtobool(do):
+    cancel()
+
 if os.path.exists(environment):
     overwrite = input(
         f"Overwrite virtual environment {os.getcwd()}/{environment}? (Y/n) "
@@ -141,56 +144,53 @@ if os.path.exists(".git"):
         cancel()
 
 
-if do == '' or strtobool(do):
-    try:
-        if check:
-            with waiton("Running check script"):
-                log_script(check)
-                run('python', '-c', check)
+try:
+    if check:
+        with waiton("Running check script"):
+            log_script(check)
+            run('python', '-c', check)
 
-        with waiton(f"Creating virtual environment in {environment}"):
-            run('python', '-m', 'venv', environment)
+    with waiton(f"Creating virtual environment in {environment}"):
+        run('python', '-m', 'venv', environment)
 
-        if os.path.isdir(os.path.join(environment, 'bin')):
-            executable = os.path.join(environment, 'bin/python')
-        elif os.path.isdir(os.path.join(environment, 'Scripts')):
-            executable = os.path.join(environment, 'Scripts/python')
-        else:
-            raise OSError(
-                'The virtual environment has an unexpected format.'
-            )
+    if os.path.isdir(os.path.join(environment, 'bin')):
+        executable = os.path.join(environment, 'bin/python')
+    elif os.path.isdir(os.path.join(environment, 'Scripts')):
+        executable = os.path.join(environment, 'Scripts/python')
+    else:
+        raise OSError(
+            'The virtual environment has an unexpected format.'
+        )
 
-        with waiton("Installing gitploy requirements"):
-            pip_install = [executable, '-m', 'pip', 'install']
-            run(*pip_install, '--upgrade', 'pip')
-            run(*pip_install, *install_requirements)
+    with waiton("Installing gitploy requirements"):
+        pip_install = [executable, '-m', 'pip', 'install']
+        run(*pip_install, '--upgrade', 'pip')
+        run(*pip_install, *install_requirements)
 
-        with waiton("Deploying git repository"):
-            log_script(deploy_git)
-            run(executable, '-c', deploy_git)
+    with waiton("Deploying git repository"):
+        log_script(deploy_git)
+        run(executable, '-c', deploy_git)
 
-        with waiton("Installing project requirements"):
-            run(*pip_install, '-r', requirements_file)
+    with waiton("Installing project requirements"):
+        run(*pip_install, '-r', requirements_file)
 
-        with waiton("Running setup scripts"):
-            for script_template in setup_script_templates:
-                with open(script_template, 'r') as f:
-                    script = Template(f.read()).substitute(
-                        name=name,
-                        url=url,
-                        version=version,
-                        environment=environment
-                    )
-                    log_script(script)
-                    run(executable, '-c', script)
+    with waiton("Running setup scripts"):
+        for script_template in setup_script_templates:
+            with open(script_template, 'r') as f:
+                script = Template(f.read()).substitute(
+                    name=name,
+                    url=url,
+                    version=version,
+                    environment=environment
+                )
+                log_script(script)
+                run(executable, '-c', script)
 
-        # Remove this script
-        os.remove(__file__)
-        os.rename(LOG, SUCCESS)
-        hang()
-    except subprocess.CalledProcessError as e:
-        log.info(f"Failed to deploy!")
-        os.rename(LOG, FAILURE)
-        hang(1)
-else:
-    cancel()
+    # Remove this script
+    os.remove(__file__)
+    os.rename(LOG, SUCCESS)
+    hang()
+except subprocess.CalledProcessError as e:
+    log.info(f"Failed to deploy!")
+    os.rename(LOG, FAILURE)
+    hang(1)
