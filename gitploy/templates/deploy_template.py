@@ -188,9 +188,11 @@ try:
 
     # Remove this script
     os.remove(__file__)
+    logging.shutdown()
     os.rename(LOG, SUCCESS)
     hang()
 except subprocess.CalledProcessError as e:
     log.info(f"Failed to deploy!")
+    logging.shutdown()
     os.rename(LOG, FAILURE)
     hang(1)
