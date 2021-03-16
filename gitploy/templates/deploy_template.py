@@ -78,7 +78,7 @@ def waiton(message):
                 "\r+ Done " + message[0].lower() + message[1:] + "\n"
             ])
         else:
-            stdout.write("  " + message + "\n")
+            stdout.write("\r- " + message + "\n")
 
 
 
