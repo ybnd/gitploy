@@ -15,7 +15,7 @@ version = "$version"
 # Installs its dependencies in the virtual environment
 # Runs the following script templates for $name:
 setup_script_templates = $setup
-# You can read them here: $url/tree/$version/scripts
+# You can find them here: $url/tree/$version
 
 # Progress is logged to
 LOG = ".deploy.log"
@@ -192,7 +192,7 @@ try:
     os.rename(LOG, SUCCESS)
     hang()
 except subprocess.CalledProcessError as e:
-    log.info(f"Failed to deploy!")
+    log.info(f"Failed to deploy! For more details, check failure.log")
     logging.shutdown()
     os.rename(LOG, FAILURE)
     hang(1)
