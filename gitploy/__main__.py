@@ -5,7 +5,7 @@ from string import Template
 
 from gitploy.templates import *
 
-__version__ = 0.5
+__version__ = 0.6
 
 # https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
 yaml.add_representer(
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         with open('.ploy', 'r') as f:
             config = yaml.safe_load(f.read())
     else:
-        config = {}
+        raise ValueError(f"No configuration provided!")
 
     for key in DEFAULT.keys():
         if key not in config:
