@@ -46,9 +46,6 @@ requirements_file = "$requirements_file"
 check = '''$check'''
 deploy_git = '''$deploy_git'''
 
-# Remove previous log files:
-for log in glob.glob("*.log"):
-    os.remove(log)
 
 @contextmanager
 def waiton(message):
@@ -94,8 +91,9 @@ def run(*args):
 
 
 def hang(code = 0):
-    input("<press any key to exit> ")
-    exit(code)
+    if not sys.argv[1] == "-y":
+        input("<press any key to exit> ")
+        exit(code)
 
 
 def cancel():
@@ -107,92 +105,109 @@ def log_script(script):
     log.debug(f"\n{'=' * 80}\n{script}\n{'=' * 80}\n")
 
 
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-sh = logging.StreamHandler()
-sh.setLevel(logging.INFO)
-sh.setFormatter(logging.Formatter("%(message)s"))
-log.addHandler(sh)
-fh = logging.FileHandler(LOG)
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(logging.Formatter("%(asctime)s: %(message)s"))
-log.addHandler(fh)
+def prompt(msg: str, default: bool = False) -> bool:
+    msg = f"{msg}? ({'Y' if default else 'y'}/{'n' if default else 'N'}) "
 
-
-do = input(f"Deploy {name} from {url} ({version}) into {os.getcwd()}? (y/N) ")
-
-if do == '' or not strtobool(do):
-    cancel()
-
-if os.path.exists(environment):
-    overwrite = input(
-        f"Overwrite virtual environment {os.getcwd()}/{environment}? (Y/n) "
-    )
-    if overwrite == '' or strtobool(overwrite):
-        shutil.rmtree(environment)
+    if sys.argv[1] == "-y":
+        return True
     else:
+        while True:
+            try:
+                provided = input(msg)
+                if provided == '':
+                    return default
+                else:
+                    return strtobool(provided)
+            except ValueError:
+                continue
+
+
+if __name__ == '__main__':
+    # Remove previous log files:
+    for log in glob.glob("*.log"):
+        os.remove(log)
+
+    log = logging.getLogger()
+    log.setLevel(logging.DEBUG)
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(logging.Formatter("%(message)s"))
+    log.addHandler(sh)
+    fh = logging.FileHandler(LOG)
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter("%(asctime)s: %(message)s"))
+    log.addHandler(fh)
+
+    deploy = f"Deploy {name} from {url} ({version}) into {os.getcwd()}"
+    if not prompt(deploy):
         cancel()
 
-
-if os.path.exists(".git"):
-    overwrite = input(
-        f"Overwrite git repository in {os.getcwd()}/.git? (Y/n) "
-    )
-    if overwrite == '' or strtobool(overwrite):
-        shutil.rmtree(".git")
-    else:
-        cancel()
+    if os.path.exists(environment):
+        overwrite_env = f"Overwrite virtual environment " \
+                        f"{os.getcwd()}/{environment}"
+        if prompt(overwrite_env, True):
+            shutil.rmtree(environment)
+        else:
+            cancel()
 
 
-try:
-    if check:
-        with waiton("Running check script"):
-            log_script(check)
-            run('python', '-c', check)
+    if os.path.exists(".git"):
+        overwrite_git = f"Overwrite git repository in {os.getcwd()}/.git"
+        if prompt(overwrite_git, True):
+            shutil.rmtree(".git")
+        else:
+            cancel()
 
-    with waiton(f"Creating virtual environment in {environment}"):
-        run('python', '-m', 'venv', environment)
 
-    if os.path.isdir(os.path.join(environment, 'bin')):
-        executable = os.path.join(environment, 'bin/python')
-    elif os.path.isdir(os.path.join(environment, 'Scripts')):
-        executable = os.path.join(environment, 'Scripts/python')
-    else:
-        raise OSError(
-            'The virtual environment has an unexpected format.'
-        )
+    try:
+        if check:
+            with waiton("Running check script"):
+                log_script(check)
+                run('python', '-c', check)
 
-    with waiton("Installing gitploy requirements"):
-        pip_install = [executable, '-m', 'pip', 'install']
-        run(*pip_install, '--upgrade', 'pip')
-        run(*pip_install, *install_requirements)
+        with waiton(f"Creating virtual environment in {environment}"):
+            run('python', '-m', 'venv', environment)
 
-    with waiton("Deploying git repository"):
-        log_script(deploy_git)
-        run(executable, '-c', deploy_git)
+        if os.path.isdir(os.path.join(environment, 'bin')):
+            executable = os.path.join(environment, 'bin/python')
+        elif os.path.isdir(os.path.join(environment, 'Scripts')):
+            executable = os.path.join(environment, 'Scripts/python')
+        else:
+            raise OSError(
+                'The virtual environment has an unexpected format.'
+            )
 
-    with waiton("Installing project requirements"):
-        run(*pip_install, '-r', requirements_file)
+        with waiton("Installing gitploy requirements"):
+            pip_install = [executable, '-m', 'pip', 'install']
+            run(*pip_install, '--upgrade', 'pip')
+            run(*pip_install, *install_requirements)
 
-    with waiton("Running setup scripts"):
-        for script_template in setup_script_templates:
-            with open(script_template, 'r') as f:
-                script = Template(f.read()).substitute(
-                    name=name,
-                    url=url,
-                    version=version,
-                    environment=environment
-                )
-                log_script(script)
-                run(executable, '-c', script)
+        with waiton("Deploying git repository"):
+            log_script(deploy_git)
+            run(executable, '-c', deploy_git)
 
-    # Remove this script
-    os.remove(__file__)
-    logging.shutdown()
-    os.rename(LOG, SUCCESS)
-    hang()
-except subprocess.CalledProcessError as e:
-    log.info(f"Failed to deploy! For more details, check failure.log")
-    logging.shutdown()
-    os.rename(LOG, FAILURE)
-    hang(1)
+        with waiton("Installing project requirements"):
+            run(*pip_install, '-r', requirements_file)
+
+        with waiton("Running setup scripts"):
+            for script_template in setup_script_templates:
+                with open(script_template, 'r') as f:
+                    script = Template(f.read()).substitute(
+                        name=name,
+                        url=url,
+                        version=version,
+                        environment=environment
+                    )
+                    log_script(script)
+                    run(executable, '-c', script)
+
+        # Remove this script
+        os.remove(__file__)
+        logging.shutdown()
+        os.rename(LOG, SUCCESS)
+        hang()
+    except subprocess.CalledProcessError as e:
+        log.info(f"Failed to deploy! For more details, check failure.log")
+        logging.shutdown()
+        os.rename(LOG, FAILURE)
+        hang(1)

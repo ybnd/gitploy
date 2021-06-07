@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="gitploy",
-    version="0.6",
+    version="0.7",
     author="Yury Bondarenko",
     author_email="ybnd@tuta.io",
     url="https://github.com/ybnd/gitploy",

@@ -5,7 +5,7 @@ from string import Template
 
 from gitploy.templates import *
 
-__version__ = 0.6
+__version__ = 0.7
 
 # https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
 yaml.add_representer(
