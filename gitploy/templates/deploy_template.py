@@ -40,6 +40,8 @@ from itertools import cycle
 import subprocess
 from string import Template
 
+INTERACTIVE = not sys.argv[1] == "-y"
+
 install_requirements = $install_requirements
 requirements_file = "$requirements_file"
 
@@ -50,6 +52,7 @@ deploy_git = '''$deploy_git'''
 @contextmanager
 def waiton(message):
     stdout = sys.stdout
+
     stop = threading.Event()
     ok = True
 
@@ -57,13 +60,14 @@ def waiton(message):
         for frame in cycle("-\\|/"):
             if stop.is_set():
                 break
-            stdout.write("\r"+ frame + " " + message + " ")
+            stdout.write(f"\r{frame} {message} ")
             stdout.flush()
             time.sleep(0.15)
 
     try:
         log.debug(message)
-        threading.Thread(target=_animation).start()
+        if INTERACTIVE:
+            threading.Thread(target=_animation).start()
         yield
     except Exception as e:
         ok = False
@@ -72,10 +76,10 @@ def waiton(message):
         stop.set()
         if ok:
             stdout.writelines([
-                "\r+ Done " + message[0].lower() + message[1:] + "\n"
+                f"\r+ Done {message[0].lower() + message[1:]}\n"
             ])
         else:
-            stdout.write("\r- " + message + "\n")
+            stdout.write(f"\r- {message}\n")
 
 
 
@@ -91,7 +95,7 @@ def run(*args):
 
 
 def hang(code = 0):
-    if not sys.argv[1] == "-y":
+    if INTERACTIVE:
         input("<press any key to exit> ")
         exit(code)
 
@@ -108,7 +112,7 @@ def log_script(script):
 def prompt(msg: str, default: bool = False) -> bool:
     msg = f"{msg}? ({'Y' if default else 'y'}/{'n' if default else 'N'}) "
 
-    if sys.argv[1] == "-y":
+    if INTERACTIVE:
         return True
     else:
         while True:
