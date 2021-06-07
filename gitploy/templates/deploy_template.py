@@ -40,7 +40,7 @@ from itertools import cycle
 import subprocess
 from string import Template
 
-INTERACTIVE = not sys.argv[1] == "-y"
+INTERACTIVE = len(sys.argv) == 1 or sys.argv[1] != "-y"
 
 install_requirements = $install_requirements
 requirements_file = "$requirements_file"
@@ -97,7 +97,7 @@ def run(*args):
 def hang(code = 0):
     if INTERACTIVE:
         input("<press any key to exit> ")
-        exit(code)
+    exit(code)
 
 
 def cancel():
@@ -113,8 +113,6 @@ def prompt(msg: str, default: bool = False) -> bool:
     msg = f"{msg}? ({'Y' if default else 'y'}/{'n' if default else 'N'}) "
 
     if INTERACTIVE:
-        return True
-    else:
         while True:
             try:
                 provided = input(msg)
@@ -124,6 +122,8 @@ def prompt(msg: str, default: bool = False) -> bool:
                     return strtobool(provided)
             except ValueError:
                 continue
+    else:
+        return True
 
 
 if __name__ == '__main__':
