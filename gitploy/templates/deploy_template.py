@@ -101,7 +101,7 @@ def run(*args):
 
 def hang(code = 0):
     if INTERACTIVE:
-        input("<press any key to exit> ")
+        input("<press any key to exit>\n")
     exit(code)
 
 
