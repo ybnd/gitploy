@@ -74,12 +74,13 @@ def waiton(message):
         raise e
     finally:
         stop.set()
-        if ok:
-            stdout.writelines([
-                f"\r+ Done {message[0].lower() + message[1:]}\n"
-            ])
-        else:
-            stdout.write(f"\r- {message}\n")
+        if INTERACTIVE:
+            if ok:
+                stdout.writelines([
+                    f"\r+ Done {message[0].lower() + message[1:]}\n"
+                ])
+            else:
+                stdout.write(f"\r- {message}\n")
 
 
 
@@ -87,9 +88,13 @@ def run(*args):
     stdout = sys.stdout
 
     with open(LOG, "a+") as f:
-        sys.stdout = f
+        if INTERACTIVE:
+            sys.stdout = f
         try:
-            subprocess.check_call(args, stdout=f, stderr=f)
+            if INTERACTIVE:
+                subprocess.check_call(args, stdout=f, stderr=f)
+            else:
+                subprocess.check_call(args)
         finally:
             sys.stdout = stdout
 
@@ -134,8 +139,12 @@ if __name__ == '__main__':
     log = logging.getLogger()
     log.setLevel(logging.DEBUG)
     sh = logging.StreamHandler()
-    sh.setLevel(logging.INFO)
-    sh.setFormatter(logging.Formatter("%(message)s"))
+    if INTERACTIVE:
+        sh.setLevel(logging.INFO)
+        sh.setFormatter(logging.Formatter("%(message)s"))
+    else:
+        sh.setLevel(logging.DEBUG)
+        sh.setFormatter(logging.Formatter("%(asctime)s: %(message)s"))
     log.addHandler(sh)
     fh = logging.FileHandler(LOG)
     fh.setLevel(logging.DEBUG)
